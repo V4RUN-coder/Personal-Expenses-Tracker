@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Personal Expense Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --glass: rgba(255,255,255,0.9);
+  --text:#333;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  color: var(--text);
+  animation: gradientBG 10s ease infinite;
+  background: linear-gradient(270deg, #1d2671, #c33764, #ff512f, #36d1dc);
+  background-size: 800% 800%;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* floating particles */
+.particle{
+  position: fixed; width:6px; height:6px; border-radius:50%;
+  background: rgba(255,255,255,0.7);
+  animation: floatUp linear infinite;
+}
+@keyframes floatUp{
+  from{ transform: translateY(100vh) scale(1); opacity:0.7 }
+  to{ transform: translateY(-10vh) scale(0.5); opacity:0 }
+}
+
+.container {
+  max-width: 1100px;
+  margin: 40px auto;
+  background: var(--glass);
+  padding: 25px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+  transition: 0.4s;
+}
+
+h2 { text-align:center; letter-spacing:1px; }
+
+.main-grid { display:grid; grid-template-columns:1.2fr 1fr; gap:20px; }
+.grid-left { display:flex; flex-direction:column; }
+.grid-right { background:#fafafa; padding:15px; border-radius:15px; transition:0.3s; }
+
+input, select, button {
+  padding:10px; margin:5px; border-radius:8px; border:1px solid #ccc;
+  transition:0.3s;
+}
+
+/* glowing button */
+button {
+  background: linear-gradient(135deg,#ff512f,#dd2476);
+  color:white; border:none; font-weight:bold; cursor:pointer;
+  box-shadow: 0 0 10px rgba(255,81,47,0.6);
+}
+button:hover {
+  box-shadow: 0 0 20px rgba(255,81,47,1), 0 0 40px rgba(221,36,118,0.8);
+  transform: scale(1.03);
+}
+
+.flex { display:flex; gap:10px; }
+.flex input, .flex select { flex:1; }
+
+.summary { display:flex; justify-content:space-between; margin:20px 0; }
+
+.card {
+  flex:1; margin:5px; padding:20px; border-radius:15px; color:white;
+  text-align:center; font-size:18px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.card:hover { transform: translateY(-5px); box-shadow:0 10px 20px rgba(0,0,0,0.2); }
+
+.balance { background: linear-gradient(135deg,#36d1dc,#5b86e5); }
+.income { background: linear-gradient(135deg,#11998e,#38ef7d); }
+.expense { background: linear-gradient(135deg,#ff416c,#ff4b2b); }
+
+ul { list-style:none; padding:0; }
+li {
+  background:#f1f1f1; margin:6px 0; padding:12px; border-radius:10px;
+  display:flex; justify-content:space-between; transition:0.3s;
+}
+li:hover { background:#e0e0e0; transform:scale(1.02); }
+
+canvas { max-height:350px; }
+
+/* dark mode */
+.dark {
+  --glass: rgba(30,30,30,0.9);
+  --text:#f1f1f1;
+}
+.dark .grid-right{ background:#222; }
+.dark li{ background:#333; color:#fff; }
+.dark li:hover{ background:#444; }
+
+.toggle {
+  position:absolute; top:15px; right:20px; cursor:pointer;
+  padding:8px 12px; border-radius:10px; background:#000; color:#fff;
+}
+
+</style>
+</head>
+
+<body>
+<div class="toggle" onclick="toggleMode()">🌙</div>
+<div class="container">
+<h2>💸 Personal Expenses Tracker</h2>
+
+<div class="main-grid">
+
+<div class="grid-left">
+
+<div class="flex">
+<select id="type">
+<option value="income">Income</option>
+<option value="expense">Expense</option>
+</select>
+<input type="text" id="desc" placeholder="Description">
+<input type="number" id="amount" placeholder="Amount">
+</div>
+
+<div class="flex">
+<select id="category">
+<option>Food</option>
+<option>Travel</option>
+<option>Bills</option>
+<option>Others</option>
+</select>
+<input type="date" id="date">
+</div>
+
+<button onclick="addTransaction()">➕ Add Transaction</button>
+
+<div class="summary">
+<div class="card balance">Balance<br>₹<span id="balance">0</span></div>
+<div class="card income">Income<br>₹<span id="income">0</span></div>
+<div class="card expense">Expense<br>₹<span id="expense">0</span></div>
+</div>
+
+<select id="filterCategory" onchange="render()">
+<option value="all">All Categories</option>
+<option>Food</option>
+<option>Travel</option>
+<option>Bills</option>
+<option>Others</option>
+</select>
+
+<h3>📋 Transactions</h3>
+<ul id="list"></ul>
+
+</div>
+
+<div class="grid-right">
+<h3>📊 Spending Chart</h3>
+<canvas id="chart"></canvas>
+</div>
+
+</div>
+
+<p style="text-align:center; margin-top:20px; font-weight:500;">
+  Developed by TEAM-8 | 2nd year BTech CSE-E
+</p>
+
+</div>
+
+<script>
+// particles
+for(let i=0;i<40;i++){
+  let p=document.createElement('div');
+  p.className='particle';
+  p.style.left=Math.random()*100+'vw';
+  p.style.animationDuration=(5+Math.random()*5)+'s';
+  document.body.appendChild(p);
+}
+
+let data = JSON.parse(localStorage.getItem('data')) || [];
+let chart;
+
+function toggleMode(){ document.body.classList.toggle('dark'); }
+
+function addTransaction(){
+let type=document.getElementById('type').value;
+let desc=document.getElementById('desc').value;
+let amount=parseFloat(document.getElementById('amount').value);
+let category=document.getElementById('category').value;
+let date=document.getElementById('date').value;
+if(desc===''||isNaN(amount)||date===''){alert('Fill all fields');return;}
+
+data.push({type,desc,amount,category,date});
+localStorage.setItem('data',JSON.stringify(data));
+render();
+}
+
+function deleteItem(i){ data.splice(i,1); localStorage.setItem('data',JSON.stringify(data)); render(); }
+
+function render(){
+let list=document.getElementById('list');
+let filter=document.getElementById('filterCategory').value;
+list.innerHTML='';
+let income=0,expense=0;
+let categoryTotals={Food:0,Travel:0,Bills:0,Others:0};
+
+data.forEach((item,i)=>{
+if(filter!=='all' && item.category!==filter) return;
+let li=document.createElement('li');
+li.innerHTML=`${item.desc} (${item.category}) - ₹${item.amount} <span onclick="deleteItem(${i})" style="cursor:pointer;color:red">❌</span>`;
+list.appendChild(li);
+if(item.type==='income') income+=item.amount;
+else {expense+=item.amount; categoryTotals[item.category]+=item.amount;}
+});
+
+let balance=income-expense;
+document.getElementById('income').textContent=income;
+document.getElementById('expense').textContent=expense;
+document.getElementById('balance').textContent=balance;
+updateChart(categoryTotals);
+}
+
+function updateChart(dataObj){
+let ctx=document.getElementById('chart');
+if(chart) chart.destroy();
+chart=new Chart(ctx,{
+type:'pie',
+data:{labels:Object.keys(dataObj),datasets:[{data:Object.values(dataObj)}]},
+options:{plugins:{tooltip:{callbacks:{label:function(context){
+let total=context.dataset.data.reduce((a,b)=>a+b,0);
+let value=context.raw;
+let percentage= total?((value/total)*100).toFixed(1):0;
+return context.label+': ₹'+value+' ('+percentage+'%)';
+}}}}}
+});
+}
+
+render();
+</script>
+</body>
+</html>
